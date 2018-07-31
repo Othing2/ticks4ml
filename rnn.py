@@ -12,6 +12,7 @@ refer: [1] https://github.com/qixianbiao/RNN/blob/aac3746c23a8de9ba8eb13ef189aac
 import random
 import copy
 import numpy as np
+from nn import Activiator
 
 
 class BaseRNN(object):
@@ -30,8 +31,7 @@ class BaseRNN(object):
         # 时间序列隐藏层的状态值
         self.init_state = np.random.randn(dim_hidden, 1)
 
-        self.activator = self.fun_tanh
-        self.activator_div = self.div_tanh
+        self.act = Activiator()
 
         self.if_biase = if_biase
 
@@ -48,7 +48,7 @@ class BaseRNN(object):
             pre_state = self.init_state if t == 0 else states[t-1]
 
             z = np.dot(u, pre_state)+np.dot(wi, a)  # 隐藏层加权输入
-            ah = self.activator(z)  # 隐藏层状态值, 激活函数采用tanh()
+            ah = self.act.tanh(z)  # 隐藏层状态值, 激活函数采用tanh()
             states.append(ah)
 
             # 输出层
@@ -78,7 +78,7 @@ class BaseRNN(object):
             dwo += np.outer(delta_o, states[t])
 
             delta_ht += np.dot(wo.transpose(), out[t]-yt)  # 注意： delta_h的系数是往后的各时刻的累加, 可以看refer[2]论文(9)等式
-            delta_h = delta_ht*self.activator_div(states[t])
+            delta_h = delta_ht*self.act.tanh_diff(states[t])
             dwi += np.outer(delta_h, xt)
             du += np.outer(delta_h, states[t-1])
 
@@ -91,30 +91,6 @@ class BaseRNN(object):
         self.init_state -= lr*delta_ht/np.sqrt(delta_ht*delta_ht+0.00000001)  # 更新初始化状态,不知道有什么特殊含义
         return loss
 
-    def fun_tanh(self, weighted_input):
-        return np.tanh(weighted_input)
-
-    def div_tanh(self, state):
-        return 1 - state*state
-
-    def fun_relu(self, weighted_input):
-        """Relu 函数"""
-        def op(e): return max(0, e)
-
-        z = copy.deepcopy(weighted_input)
-        for e in np.nditer(z, op_flags=['readwrite']):
-            e[...] = op(e)
-        return z
-
-    def div_relu(self, output):
-        """Relu 函数导数"""
-        def op(e): return 1 if e > 0 else 0
-
-        o = copy.deepcopy(output)
-        for e in np.nditer(o, op_flags=['readwrite']):
-            e[...] = op(e)
-        return o
-
     def softmax(self, z):
         z = (np.exp(z) + 0.00000000001) / np.sum(np.exp(z) + 0.00000000001)
         return z
@@ -124,7 +100,7 @@ class BaseRNN(object):
         u, wi, wo = self.u_weights[0], self.w_weights[0], self.w_weights[-1]
         predict = []
         for i in range(9-1):
-            ht = self.activator(np.dot(wi, x) + np.dot(u, h))
+            ht = self.act.tanh(np.dot(wi, x) + np.dot(u, h))
             ot = self.softmax(np.dot(wo, ht))
             ynext = np.argmax(ot)
             predict.append(ynext)
@@ -133,6 +109,28 @@ class BaseRNN(object):
         return predict
 
     def predict(self, x):
+        self.times = x.shape[1]
+        u, wi, wo = self.u_weights[0], self.w_weights[0], self.w_weights[-1]
+
+        output = []
+
+        for t in range(self.times):
+            # 隐藏层
+            a = x[:, t].reshape(-1, 1)  # t时刻输入, array切片把列向量转换成行向量了
+            pre_state = self.init_state if t == 0 else pre_state
+
+            z = np.dot(u, pre_state) + np.dot(wi, a)  # 隐藏层加权输入
+            ah = self.act.tanh_diff(z)  # 隐藏层状态值, 激活函数采用tanh()
+            pre_state = ah
+
+            # 输出层
+            zo = np.dot(wo, ah)  # 输出层加权输入
+            ao = self.softmax(zo)  # 输出层状态值, 输出采用softmax()
+            output.append(ao)
+
+        return output
+
+    def predict_word(self, x):
         tag_dict = {0: 'S', 1: 'B', 2: 'M', 3: 'E'}
         out, state = self.forward_propagate(x)
         predict = []
@@ -183,7 +181,7 @@ if __name__ == '__main__':
         print('epoch i:', ll)
         # x, y = getrandomdata(2000)  # 所有数据分成epoches次训练
         for i in range(x.shape[0]):
-            loss, state = model.backward_propagate(x[i], y[i], lr=0.001)
+            loss = model.backward_propagate(x[i], y[i], lr=0.001)
             if i == 1:
                 smooth_loss = loss
             else:

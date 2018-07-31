@@ -31,6 +31,11 @@ class Activiator(object):
     def tanh_diff(cls, y):
         return 1. - y**2
 
+    @classmethod
+    def softmax(cls, z):
+        z = (np.exp(z) + 0.00000000001) / np.sum(np.exp(z) + 0.00000000001)
+        return z
+
 
 class BaseLSTM(object):
 
@@ -56,7 +61,7 @@ class BaseLSTM(object):
         self.ba = np.random.randn(hd)
 
         self.init_state = np.random.randn(hd)
-        self.init_output = np.random.randn(hd)
+        self.init_hyper = np.random.randn(hd)
 
         self.act = Activiator()
         self.times = 0
@@ -80,12 +85,12 @@ class BaseLSTM(object):
         """ 输入 x: 一个经过标准的序列，而不是序列中的一个元素"""
         self.times = x.shape[1]
 
-        outputs, states = [], [self.init_state]
+        hd_out, states = [self.init_hyper], [self.init_state]
         self.init_weight_output()
 
         for t in range(self.times):
-            ht_1 = self.init_output if t == 0 else outputs[t - 1]
-            st_1 = states[t-1]
+            ht_1 = hd_out[t]
+            st_1 = states[t]
             xt = np.hstack((x[:, t], ht_1))  # eq.0
 
             ft = self.act.sigmod(np.dot(self.wf, xt)+self.bf)    # eq.1
@@ -98,25 +103,25 @@ class BaseLSTM(object):
             ht = gt*ot   # eq.7
 
             states.append(st)
-            outputs.append(ht)
+            hd_out.append(ht)
+
             self.record_weight_output(ft, it, ot, at, gt)
 
-        return outputs, states
+        return hd_out, states
 
     def backward_propagate(self, x, y, lr=0.002):
         """采用欧几里得距离作为损失函数"""
-        out, states = self.forward_propagate(x)
+        hd_out, states = self.forward_propagate(x)
 
-        loss = np.sum((out[-1]-y[:, -1])**2)
-        dh = 2*(out[-1]-y[:, -1])
+        loss = np.sum((hd_out[-1]-y[:, -1])**2)
+        dh = (hd_out[-1]-y[:, -1])
         ds = np.zeros_like(self.init_state)
 
         swi, swf, swo, swa = np.zeros_like(self.wi), np.zeros_like(self.wf), np.zeros_like(self.wo), np.zeros_like(self.wa)
         sbi, sbf, sbo, sba = np.zeros_like(self.bi), np.zeros_like(self.bf), np.zeros_like(self.bo), np.zeros_like(self.ba)
         for t in range(self.times-1, -1, -1):
-
             # ds = delta_E/delta_s = delta_E/delta_h*delta_h/delta_s, 根据【eq.7】得到如下结果
-            ds += dh * self.zo_list[t] * self.act.tanh_diff(self.zg_list[t])  # 累加
+            ds += dh * self.zo_list[t] * self.act.tanh_diff(self.zg_list[t])  # 累加状态误差
             # do = delta_E/delta_o = dh * delta_h/delta_o, 根据【eq.7】得到如下结果
             do = dh * self.zg_list[t]
 
@@ -137,11 +142,11 @@ class BaseLSTM(object):
             w = np.vstack((self.wi, self.wf, self.wo, self.wa))
             # 因为 z=w*x -> dx= delta_E/delta_x= dz*w
             dxi = np.dot(w.T, dz)
-            dh = dxi[self.xd:]
+            _dh = dxi[self.xd:]
+            dh = _dh + (hd_out[t]-y[:, t-1])  # 累加输出误差
 
             # 求解dw, db
-            ht_1 = self.init_output if t == 0 else out[t-1]
-            xt = np.hstack((x[:, t], ht_1))
+            xt = np.hstack((x[:, t], hd_out[t]))
 
             swi += np.outer(dzi, xt)
             swf += np.outer(dzf, xt)
@@ -152,7 +157,7 @@ class BaseLSTM(object):
             sbo += dzo
             sba += dza
 
-            loss += np.sum((out[t] - y[:, t])**2)
+            loss += np.sum((hd_out[t][0] - y[:, t])**2)
 
         self.wi -= lr*swi/np.sqrt(swi*swi+0.00000001)
         self.wf -= lr*swf/np.sqrt(swf*swf+0.00000001)
@@ -168,14 +173,27 @@ class BaseLSTM(object):
         return loss
 
     def prodict(self, x):
-        tag_dict = {0: 'S', 1: 'B', 2: 'M', 3: 'E'}
-        state, out = self.forward_propagate(x)
-        predict = []
-        for o in out:
-            idx = np.argmax(o)
-            predict.append(idx)
-        predict = map(lambda x: tag_dict.get(x), predict)
-        return predict
+        self.times = x.shape[1]
+
+        outputs = []
+
+        for t in range(self.times):
+            ht_1 = self.init_hyper if t == 0 else outputs[t - 1]
+            st_1 = self.init_state if t == 0 else st
+            xt = np.hstack((x[:, t], ht_1))  # eq.0
+
+            ft = self.act.sigmod(np.dot(self.wf, xt) + self.bf)  # eq.1
+            it = self.act.sigmod(np.dot(self.wi, xt) + self.bi)  # eq.2
+            ot = self.act.sigmod(np.dot(self.wo, xt) + self.bo)  # eq.3
+            at = self.act.tanh(np.dot(self.wa, xt) + self.ba)  # eq.4
+
+            st = ft * st_1 + it * at  # eq.5
+            gt = self.act.tanh(st)  # eq.6
+            ht = gt * ot  # eq.7
+
+            outputs.append(ht)
+
+        return outputs
 
 
 if __name__ == '__main__':

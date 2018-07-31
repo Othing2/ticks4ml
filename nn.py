@@ -9,6 +9,25 @@ import random
 import numpy as np
 
 
+class Activiator(object):
+
+    @classmethod
+    def sigmod(cls, x):
+        return 1./(1+np.exp(-x))
+
+    @classmethod
+    def sigmod_diff(cls, y):
+        return y*(1-y)
+
+    @classmethod
+    def tanh(cls, x):
+        return np.tanh(x)
+
+    @classmethod
+    def tanh_diff(cls, y):
+        return 1. - y**2
+
+
 class BaseNN(object):
 
     def __init__(self, layer_list):
@@ -23,11 +42,13 @@ class BaseNN(object):
         # bias
         self.biases = [np.random.randn(y, 1) for y in layer_list[1:]]
 
+        self.act = Activiator()
+
     def forward_output(self, a):
         """只返回最后输出结果, 不保留中间层的输入输出值"""
         for b, w in zip(self.biases, self.weights):
             z = np.dot(w, a) + b
-            a = self.f(z)
+            a = self.act.sigmod(z)
         return a
 
     def forward_propagate(self, a):
@@ -36,7 +57,7 @@ class BaseNN(object):
         for b, w in zip(self.biases, self.weights):   # loop: a = f(z)
             z = np.dot(w, a)+b
             forward_z.append(z)
-            a = self.f(z)
+            a = self.act.sigmod(z)
             forward_a.append(a)
         return forward_a, forward_z
 
@@ -47,12 +68,11 @@ class BaseNN(object):
         # 向前计算每层的输入,输出值
         al, zl = self.forward_propagate(x)
         # 向后计算残差
-        dt = (al[-1]-y)*self.df(zl[-1])
+        dt = (al[-1]-y)*self.act.sigmod_diff(zl[-1])
         db[-1] = dt
         dw[-1] = np.dot(dt, al[-2].transpose())
         for i in range(2, self.nn):        # loop: dt = w*dt*df(z)
-            # dt = self.weights[i]*dt*self.df(self.A[i])
-            dt = np.dot(self.weights[-i+1].transpose(), dt)*self.df(zl[-i])
+            dt = np.dot(self.weights[-i+1].transpose(), dt)*self.act.sigmod_diff(zl[-i])
             db[-i] = dt
             dw[-i] = np.dot(dt, al[-i-1].transpose())
         return db, dw
@@ -117,15 +137,6 @@ class BaseNN(object):
     def test(self, test_dt=None):
         res = [(np.argmax(self.forward_output(x)), y) for (x, y) in test_dt]
         return sum(int(x == y) for (x, y) in res)
-
-    def f(self, z):
-        """sigmoid"""
-        return 1.0/(1.0+np.exp(-z))
-
-    def df(self, z):
-        """div_sigmoid"""
-        # return (1 - self.f(wa))*self.f(wa)
-        return self.f(z)*(1.0 - self.f(z))
 
 
 if __name__ == '__main__':
