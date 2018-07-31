@@ -191,91 +191,91 @@ if __name__ == '__main__':
 # ----------------------------------------------------------------------------------------
 
 
-# def load_word_file(path, w2v, bath_size=0, bath_id=0):
-#     # [0/S 1/B 2/M 3/E]
-#     w_dim = w2v.WordDim
-#     max_len = 80
-#     with open(path, 'r') as f:
-#         word_tags = []
-#         if bath_size > 0:
-#             lines = f.readlines()[bath_size*bath_id:bath_size*(bath_id+1)]
-#         else:
-#             lines = f.readlines()
-#         for line in lines:
-#             ln = map(lambda x: int(x), line.strip().split(' '))
-#             word = filter(lambda x: x != 0, ln[:max_len])
-#             tag = ln[max_len:max_len+len(word)]
-#
-#             assert len(word) == len(tag)
-#             vect_x = np.zeros([w_dim, len(word)])
-#             vect_y = np.zeros([4, len(word)])
-#             for i, w in enumerate(word):
-#                 v = w2v.GetVectorByIndex(w)
-#                 if not v:
-#                     print("Not exit", w)
-#                     continue
-#                 vect_x[:, i] = v
-#                 vect_y[tag[i], i] = 1.0
-#             word_tags.append((vect_x, vect_y))
-#     return word_tags
-#
-#
-# def word_test(path, w2v, ll=0):
-#     tag_dict = {0: 'S', 1: 'B', 2: 'M', 3: 'E'}
-#     w_dim = w2v.WordDim
-#     max_len = 80
-#     with open(path, 'r') as f:
-#         line = f.readline()
-#         if ll:
-#             line = f.readlines()[:ll][-1]
-#         ln = map(lambda x: int(x), line.strip().split(' '))
-#         word = filter(lambda x: x != 0, ln[:max_len])
-#         tag = ln[max_len:max_len + len(word)]
-#
-#         words = [w2v.GetWordByIndex(w) for w in word]
-#         tags = ''.join([tag_dict.get(t) for t in tag])
-#         lt = len(words)
-#         for i, t in enumerate(tags[::-1]):
-#             if t == 'S' or t == 'E':
-#                 if i == 0:
-#                     words.append('')
-#                 else:
-#                     words.insert(lt-i, '/')
-#
-#     return u''.join(words)
-#
-#
-# if __name__ == '__main__':
-#     """测试中文分词, 效果太差了 ^_^"""
-#     from refers.tag_build._config import *
-#     from refers.tag_build.w2v import Word2vecVocab
-#
-#     w2v = Word2vecVocab()
-#     w2v.Load(char_vec_path)
-#     model = BaseRNN(50, 100, 4)
-#
-#     ws = word_test(char_train_path, w2v, ll=4)
-#     print(ws)
-#
-#     # test_word = u"人民富裕起来了"  # B E B E B M E
-#     # test_vect = np.zeros([w2v.WordDim, len(test_word)])
-#     # for i, w in enumerate(test_word):
-#     #     v = w2v.GetVector(w.encode("utf8"))
-#     #     test_vect[:, i] = v
-#     #
-#     # epoches = 70
-#     # batch_size = 10000
-#     # smooth_loss = 0
-#     # for ll in range(epoches):
-#     #     print('epoch i:', ll)
-#     #     train_word = load_word_file(char_train_path, w2v, batch_size, ll)
-#     #     for i, (x, y) in enumerate(train_word):
-#     #         loss, state = model.backward_propagate(x, y, lr=0.001)
-#     #         if i == 1:
-#     #             smooth_loss = loss
-#     #         else:
-#     #             smooth_loss = smooth_loss * 0.999 + loss * 0.001
-#     #     print('loss ----  ', smooth_loss)
+def load_word_file(path, w2v, bath_size=0, bath_id=0):
+    # [0/S 1/B 2/M 3/E]
+    w_dim = w2v.WordDim
+    max_len = 80
+    with open(path, 'r') as f:
+        word_tags = []
+        if bath_size > 0:
+            lines = f.readlines()[bath_size*bath_id:bath_size*(bath_id+1)]
+        else:
+            lines = f.readlines()
+        for line in lines:
+            ln = map(lambda x: int(x), line.strip().split(' '))
+            word = filter(lambda x: x != 0, ln[:max_len])
+            tag = ln[max_len:max_len+len(word)]
+
+            assert len(word) == len(tag)
+            vect_x = np.zeros([w_dim, len(word)])
+            vect_y = np.zeros([4, len(word)])
+            for i, w in enumerate(word):
+                v = w2v.GetVectorByIndex(w)
+                if not v:
+                    print("Not exit", w)
+                    continue
+                vect_x[:, i] = v
+                vect_y[tag[i], i] = 1.0
+            word_tags.append((vect_x, vect_y))
+    return word_tags
+
+
+def word_test(path, w2v, ll=0):
+    tag_dict = {0: 'S', 1: 'B', 2: 'M', 3: 'E'}
+    w_dim = w2v.WordDim
+    max_len = 80
+    with open(path, 'r') as f:
+        line = f.readline()
+        if ll:
+            line = f.readlines()[:ll][-1]
+        ln = list(map(lambda x: int(x), line.strip().split(' ')))
+        word = list(filter(lambda x: x != 0, ln[:max_len]))
+        tag = ln[max_len:max_len + len(word)]
+
+        words = [w2v.GetWordByIndex(w) for w in word]
+        tags = ''.join([tag_dict.get(t) for t in tag])
+        lt = len(words)
+        for i, t in enumerate(tags[::-1]):
+            if t == 'S' or t == 'E':
+                if i == 0:
+                    words.append('')
+                else:
+                    words.insert(lt-i, '/')
+
+    return u''.join(words)
+
+
+if __name__ == '__main__':
+    """测试中文分词, 效果太差了 ^_^"""
+    from refers.tag_build._config import *
+    from refers.tag_build.w2v import Word2vecVocab
+
+    w2v = Word2vecVocab()
+    w2v.Load(char_vec_path)
+    model = BaseRNN(50, 100, 4)
+
+    ws = word_test(char_train_path, w2v, ll=4)
+    print(ws)
+
+    # test_word = u"人民富裕起来了"  # B E B E B M E
+    # test_vect = np.zeros([w2v.WordDim, len(test_word)])
+    # for i, w in enumerate(test_word):
+    #     v = w2v.GetVector(w.encode("utf8"))
+    #     test_vect[:, i] = v
+    #
+    # epoches = 70
+    # batch_size = 10000
+    # smooth_loss = 0
+    # for ll in range(epoches):
+    #     print('epoch i:', ll)
+    #     train_word = load_word_file(char_train_path, w2v, batch_size, ll)
+    #     for i, (x, y) in enumerate(train_word):
+    #         loss, state = model.backward_propagate(x, y, lr=0.001)
+    #         if i == 1:
+    #             smooth_loss = loss
+    #         else:
+    #             smooth_loss = smooth_loss * 0.999 + loss * 0.001
+    #     print('loss ----  ', smooth_loss)
 
 
 

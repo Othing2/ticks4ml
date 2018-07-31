@@ -28,7 +28,7 @@ class Word2vecVocab(object):
         if not os.path.exists(vobPath):
             raise Exception("%s path do not exist" % vobPath)
         with open(vobPath, 'r') as fp:
-            head_line = re.split(' ', fp.next().strip())
+            head_line = re.split(' ', fp.readline().strip())
             self.w_dim = int(head_line[1])
             self.avg_value = [0.0] * self.w_dim
             self.std_value = [0.0] * self.w_dim
