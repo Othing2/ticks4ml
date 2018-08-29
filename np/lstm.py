@@ -196,38 +196,6 @@ class BaseLSTM(object):
         return outputs
 
 
-if __name__ == '__main__':
-    """测试中文分词, 效果太差了 ^_^"""
-    from rnn import word_test, load_word_file
-    from refers.tag_build._config import *
-    from refers.tag_build.w2v import Word2vecVocab
-
-    w2v = Word2vecVocab()
-    w2v.Load(char_vec_path)
-    model = BaseLSTM(50, 4)
-
-    ws = word_test(char_train_path, w2v, ll=4)
-    print(ws)
-
-    test_word = u"人民富裕起来了"  # B E B E B M E
-    test_vect = np.zeros([w2v.WordDim, len(test_word)])
-    for i, w in enumerate(test_word):
-        v = w2v.GetVector(w.encode("utf8"))
-        test_vect[:, i] = v
-
-    epoches = 70
-    batch_size = 10000
-    smooth_loss = 0
-    for ll in range(epoches):
-        print('epoch i:', ll)
-        train_word = load_word_file(char_train_path, w2v, batch_size, ll)
-        for i, (x, y) in enumerate(train_word):
-            loss, state = model.backward_propagate(x, y, lr=0.001)
-            if i == 1:
-                smooth_loss = loss
-            else:
-                smooth_loss = smooth_loss * 0.999 + loss * 0.001
-        print('loss ----  ', smooth_loss)
 
 
 

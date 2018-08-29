@@ -141,7 +141,7 @@ class BaseNN(object):
 
 if __name__ == '__main__':
     """全连接网络 识别 手写数字"""
-    from refers.BP.mnist_loader import load_data_wrapper
+    from rf.BP.mnist_loader import load_data_wrapper
     training_data, validation_data, test_data = load_data_wrapper()
     bn = BaseNN([784, 30, 10])
     # bn.tran(3.0, 30, sample_dt=training_data, test_dt=test_data)

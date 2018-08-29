@@ -99,8 +99,8 @@ def word_pretty_display(path, w2v, ll=0):
 
 
 if __name__ == '__main__':
-    from refers.tag_build._config import *
-    from refers.tag_build.w2v import Word2vecVocab
+    from rf.tag_build._config import *
+    from rf.tag_build.w2v import Word2vecVocab
 
     w2v = Word2vecVocab()
     w2v.Load(char_vec_path)
