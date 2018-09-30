@@ -32,7 +32,7 @@ char_model = w2v.load(out_path)
 
 vec = char_model.get_vector(u"红")
 
-print vec
+print(vec)
 
 
 

@@ -12,7 +12,7 @@ refer: [1] https://github.com/qixianbiao/RNN/blob/aac3746c23a8de9ba8eb13ef189aac
 import random
 import copy
 import numpy as np
-from nn import Activiator
+from .nn import Activiator
 
 
 class BaseRNN(object):
