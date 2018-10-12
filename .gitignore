@@ -94,4 +94,4 @@ test.py
 # === for java project =====
 .gradle/
 out/
-data/
+
